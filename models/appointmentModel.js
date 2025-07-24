@@ -1,48 +1,61 @@
-const {DataTypes} = require('sequelize');
-const sequelize = require('../config/sequelize');
-const AppointmentType = require('./appointmentType');
-const AppointmentStatus = require('./appointmentStatus');
-const AppointmentMode = require('./appointmentMode');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/sequelize");
+const AppointmentType = require("./appointmentType");
+const AppointmentStatus = require("./appointmentStatus");
+const AppointmentMode = require("./appointmentMode");
 
 // Define the Appointment Model
-const Appointment = sequelize.define('Appointment', {
+const Appointment = sequelize.define(
+  "Appointment",
+  {
     appointment_id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-        autoIncrement: false
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      autoIncrement: false,
     },
     patient_id: {
-        type: DataTypes.UUID,
-        allowNull: false
+      type: DataTypes.UUID,
+      allowNull: false,
     },
     provider_id: {
-        type: DataTypes.UUID,
-        allowNull: false
+      type: DataTypes.UUID,
+      allowNull: false,
     },
     scheduled_time: {
-        type: DataTypes.DATE,
-        allowNull: false
+      type: DataTypes.DATE,
+      allowNull: false,
     },
     appointment_fee: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
     },
-    consultationLog:{
-        type: DataTypes.TEXT,
-        allowNull: true
-    }
-
-},{
-    tableName: 'appointments',
+    consultationLog: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    status: {
+      type: DataTypes.ENUM(
+        "Booked",
+        "Completed",
+        "Cancelled",
+        "Confirmed",
+        "In Progress",
+        "Payment Pending"
+      ),
+      allowNull: false,
+    },
+  },
+  {
+    tableName: "appointments",
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at'
-})
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  }
+);
 
 // Associations
-Appointment.belongsTo(AppointmentType, { foreignKey: 'appointment_type_id' });
-Appointment.belongsTo(AppointmentStatus, { foreignKey: 'appointment_status_id' });
-Appointment.belongsTo(AppointmentMode, { foreignKey: 'appointment_mode_id' });
+Appointment.belongsTo(AppointmentType, { foreignKey: "appointment_type_id" });
+Appointment.belongsTo(AppointmentMode, { foreignKey: "appointment_mode_id" });
 
 module.exports = Appointment;
