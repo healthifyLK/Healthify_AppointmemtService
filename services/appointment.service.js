@@ -2,7 +2,7 @@
 const Appointment = require("../models/appointmentModel");
 const TimeSlot = require("../models/timeSlot");
 const Provider = require("../models/provider");
-const { get } = require("../routes/appointment.routes");
+
 
 // Get all apointments
 const getAllAppointmentsService = async () => {

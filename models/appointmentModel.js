@@ -20,7 +20,7 @@ const Appointment = sequelize.define(
     },
     scheduled_time: {
       type: DataTypes.DATE,
-      allowNull: false,
+      allowNull: true,
     },
     consultationLog: {
       type: DataTypes.TEXT,
@@ -50,5 +50,6 @@ const Appointment = sequelize.define(
 Appointment.belongsTo(AppointmentType, { foreignKey: "appointment_type_id" });
 Appointment.belongsTo(AppointmentMode, { foreignKey: "appointment_mode_id" });
 Appointment.belongsTo(Provider, { foreignKey: "provider_id" });
+
 
 module.exports = Appointment;

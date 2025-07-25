@@ -8,6 +8,11 @@ const {
   getAllAppointments,
 } = require("../controllers/appointment.controller");
 
+const {
+  createTimeSlot,
+  getAvailableTimeSlots
+} = require("../controllers/timeSlot.controller");
+
 // GET api/appointments
 // Get all appointments
 router.get("/", getAllAppointments);
@@ -25,5 +30,15 @@ router.get("/patient/:patientId", getAppointmentsForPatient);
 // GET api/appointments/provider/:providerId
 // Get all appointments for a provider
 router.get("/provider/:providerId", getAppointmentsForProvider);
+
+
+// Routes for time slots
+// POST api/appointments/time-slots
+// Create a new time slot
+router.post("/time-slots", createTimeSlot);
+
+// GET api/appointments/time-slots/Provider/:provider_id
+// Get available time slots for a provider
+router.get("/time-slots/provider/:provider_id", getAvailableTimeSlots);
 
 module.exports = router;
