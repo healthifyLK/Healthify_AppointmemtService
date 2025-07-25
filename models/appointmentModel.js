@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/sequelize");
 const AppointmentType = require("./appointmentType");
-const AppointmentStatus = require("./appointmentStatus");
 const AppointmentMode = require("./appointmentMode");
+const Provider = require("./provider");
 
 // Define the Appointment Model
 const Appointment = sequelize.define(
@@ -18,17 +18,9 @@ const Appointment = sequelize.define(
       type: DataTypes.UUID,
       allowNull: false,
     },
-    provider_id: {
-      type: DataTypes.UUID,
-      allowNull: false,
-    },
     scheduled_time: {
       type: DataTypes.DATE,
       allowNull: false,
-    },
-    appointment_fee: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: true,
     },
     consultationLog: {
       type: DataTypes.TEXT,
@@ -57,5 +49,6 @@ const Appointment = sequelize.define(
 // Associations
 Appointment.belongsTo(AppointmentType, { foreignKey: "appointment_type_id" });
 Appointment.belongsTo(AppointmentMode, { foreignKey: "appointment_mode_id" });
+Appointment.belongsTo(Provider, { foreignKey: "provider_id" });
 
 module.exports = Appointment;

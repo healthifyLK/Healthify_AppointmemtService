@@ -5,8 +5,10 @@ const morgan = require("morgan");
 const Appointment = require("./models/appointmentModel");
 const AppointmentType = require("./models/appointmentType");
 const AppointmentMode = require("./models/appointmentMode");
-const AppointmentStatus = require("./models/appointmentStatus");
+const Provider = require("./models/provider");
+const TimeSlot = require("./models/timeSlot");
 const sequelize = require("./config/sequelize");
+const appointmentRoutes = require('./routes/appointment.routes')
 
 const PORT = process.env.PORT || 5003;
 
@@ -17,7 +19,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(morgan());
-  // Start   the server only if the database connection is successful
+
+// Routes
+app.use('/api/appointments',appointmentRoutes);
+
+// Start   the server only if the database connection is successful
 (async () => {
   try {
     await sequelize.authenticate();
