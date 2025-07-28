@@ -23,6 +23,14 @@ const Provider = sequelize.define('Provider', {
     appointmentFee: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true,
+    },
+    rating:{
+        type: DataTypes.FLOAT,
+        allowNull: true,
+    },
+    homeVisitLimit:{
+        type: DataTypes.INTEGER,
+        allowNull: true,
     }
 }, {
     tableName: 'providers',

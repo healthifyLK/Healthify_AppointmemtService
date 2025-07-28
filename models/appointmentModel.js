@@ -3,6 +3,7 @@ const sequelize = require("../config/sequelize");
 const AppointmentType = require("./appointmentType");
 const AppointmentMode = require("./appointmentMode");
 const Provider = require("./provider");
+const TimeSlot = require("./timeSlot");
 
 // Define the Appointment Model
 const Appointment = sequelize.define(
@@ -23,6 +24,18 @@ const Appointment = sequelize.define(
       allowNull: true,
     },
     consultationLog: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    duration:{
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    appointmentCharge :{
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+    },
+    additionalDetails :{
       type: DataTypes.TEXT,
       allowNull: true,
     },
@@ -50,6 +63,7 @@ const Appointment = sequelize.define(
 Appointment.belongsTo(AppointmentType, { foreignKey: "appointment_type_id" });
 Appointment.belongsTo(AppointmentMode, { foreignKey: "appointment_mode_id" });
 Appointment.belongsTo(Provider, { foreignKey: "provider_id" });
+Appointment.belongsTo(TimeSlot, { foreignKey: "time_slot_id" });
 
 
 module.exports = Appointment;

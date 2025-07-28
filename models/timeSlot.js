@@ -1,6 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/sequelize");
 const Provider = require("./provider");
+const AppointmentType = require("./appointmentType");
 
 // Define the TimeSlot model
 const TimeSlot = sequelize.define(
@@ -34,6 +35,10 @@ const TimeSlot = sequelize.define(
 // Associate TimeSlot with Provider
 TimeSlot.belongsTo(Provider, {
   foreignKey: "provider_id",
+});
+// Associate TimeSlot with AppointmentType
+TimeSlot.belongsTo(AppointmentType, {
+  foreignKey: "appointment_type_id",
 });
 
 module.exports = TimeSlot;

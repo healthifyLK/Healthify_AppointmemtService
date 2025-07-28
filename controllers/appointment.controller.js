@@ -5,6 +5,9 @@ const {
   getAppointmentsForPatientService,
   getAppointmentsForProviderService,
   getAllAppointmentsService,
+  getAppointmentService,
+  cancelAppointmentService,
+  updateAppointmentService,
 } = require("../services/appointment.service");
 
 // GET api/appointments
@@ -68,10 +71,39 @@ const getAppointmentsForProvider = async (req, res) => {
   }
 };
 
+// PUT api/appointments/:appointmentId
+// Update an appointment
+const cancelAppointment = async (req, res) => {
+  const { appointmentId } = req.params;
+  try {
+    const cancelledAppointment = await cancelAppointmentService(appointmentId);
+    res.status(200).json(cancelledAppointment);
+  } catch (error) {
+    console.error("Error cancelling appointment:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// PUT api/appointments/:appointmentId
+// Update an appointment
+const updateAppointment = async (req, res) => {
+  const { appointmentId } = req.params;
+  const updatedAppointmentData = req.body;
+  try {
+    const updatedAppointment = await updateAppointmentService(appointmentId, updatedAppointmentData);
+    res.status(200).json(updatedAppointment);
+  } catch (error) {
+    console.error("Error updating appointment:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 module.exports = {
   createAppointment,
   getActiveProviders,
   getAppointmentsForPatient,
   getAppointmentsForProvider,
-  getAllAppointments
+  getAllAppointments,
+  cancelAppointment,
+  updateAppointment
 };

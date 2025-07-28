@@ -3,7 +3,6 @@ const Appointment = require("../models/appointmentModel");
 const TimeSlot = require("../models/timeSlot");
 const Provider = require("../models/provider");
 
-
 // Get all apointments
 const getAllAppointmentsService = async () => {
   try {
@@ -30,7 +29,7 @@ const createAppointmentService = async (appointmentData) => {
       throw new Error("Missing required appointment data");
     }
     // Handle Urgent appointment scenario
-    if (type.name === "Urgent") {
+    if (mode.name === "Urgent") {
       // Create appointment
       const appointment = await Appointment.create({
         patient_id,
@@ -99,6 +98,7 @@ const getAppointmentsForPatientService = async (patientId) => {
   try {
     const appointments = await Appointment.findAll({
       where: { patient_id: patientId },
+      order: [["scheduled_time", "DESC"]],
       include: [Provider, TimeSlot],
     });
     return appointments;
@@ -116,6 +116,7 @@ const getAppointmentsForProviderService = async (providerId) => {
   try {
     const appointments = await Appointment.findAll({
       where: { provider_id: providerId },
+      order: [["scheduled_time", "DESC"]],
       include: [Provider, TimeSlot],
     });
     return appointments;
@@ -128,10 +129,64 @@ const getAppointmentsForProviderService = async (providerId) => {
   }
 };
 
+// get appointment
+const getAppointmentService = async (appointmentId) => {
+  try {
+    const appointment = await Appointment.findOne({
+      where: { appointment_id: appointmentId },
+      include: [Provider, TimeSlot],
+    });
+    return appointment;
+  } catch (error) {
+    console.error("Error in getAppointmentService:", error.message || error);
+    throw error; // Propagate the error to the controller
+  }
+};
+
+// cancel appointment
+const cancelAppointmentService = async (appointmentId) => {
+  try {
+    const appointment = await getAppointmentService(appointmentId);
+    if (!appointment) {
+      throw new Error("Appointment not found");
+    }
+    // Free the time slot
+    if (appointment.time_slot_id) {
+      await timeSlotService.releaseTimeSlot(appointment.time_slot_id);
+    }
+
+    return await updateAppointmentService(appointmentId, {
+      status: "Cancelled"
+    });
+  } catch (error) {
+    console.error("Error in cancelAppointmentService:", error.message || error);
+    throw error; // Propagate the error to the controller
+  }
+};
+
+// update appointment
+const updateAppointmentService = async (appointmentId, updatedAppointmentData) => {
+  try {
+    const appointment = await getAppointmentService(appointmentId);
+    if (!appointment) {
+      throw new Error("Appointment not found");
+    }
+    // Update appointment details
+    const updatedAppointment = await appointment.update(updatedAppointmentData);
+    return updatedAppointment;
+  } catch (error) {
+    console.error("Error in updateAppointmentService:", error.message || error);
+    throw error; // Propagate the error to the controller
+  }
+};
+
 module.exports = {
   createAppointmentService,
   getActiveProvidersService,
   getAppointmentsForPatientService,
   getAppointmentsForProviderService,
   getAllAppointmentsService,
+  getAppointmentService,
+  cancelAppointmentService,
+  updateAppointmentService,
 };

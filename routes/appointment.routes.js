@@ -6,6 +6,8 @@ const {
   getAppointmentsForPatient,
   getAppointmentsForProvider,
   getAllAppointments,
+  cancelAppointment,
+  updateAppointment
 } = require("../controllers/appointment.controller");
 
 const {
@@ -30,6 +32,14 @@ router.get("/patient/:patientId", getAppointmentsForPatient);
 // GET api/appointments/provider/:providerId
 // Get all appointments for a provider
 router.get("/provider/:providerId", getAppointmentsForProvider);
+
+// PUT api/appointments/:appointmentId/cancel
+// Cancel an appointment
+router.put("/:appointmentId/cancel", cancelAppointment);
+
+// PUT api/appointments/:appointmentId
+// Update an appointment
+router.put("/:appointmentId", updateAppointment);
 
 
 // Routes for time slots
