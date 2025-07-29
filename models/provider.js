@@ -8,10 +8,6 @@ const Provider = sequelize.define('Provider', {
         type: DataTypes.UUID,
         primaryKey: true,
     },
-    name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
     isActive: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,

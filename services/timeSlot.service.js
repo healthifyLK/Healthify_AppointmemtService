@@ -69,8 +69,52 @@ const getAvailableTimeSlotsService = async (
     throw error;
   }
 };
+// Book a time slot
+const bookTimeSlotService = async (timeSlotId) => {
+  try {
+    const timeSlot = await TimeSlot.findByPk(timeSlotId);
+    if (!timeSlot || timeSlot.is_booked) {
+      throw new Error("Time slot is not available");
+    }
+
+    // Mark the time slot as booked
+    timeSlot.is_booked = true;
+    await timeSlot.save();
+
+    return timeSlot;
+  } catch (error) {
+    console.error("Error in bookTimeSlotService:", error.message || error);
+    throw error; // Propagate the error to the controller
+  }
+};
+
+// release a booked time slot
+const releaseTimeSlotService = async (timeSlotId) => {
+  try {
+    const timeSlot = await TimeSlot.findByPk(timeSlotId);
+    if (!timeSlot || !timeSlot.is_booked) {
+      throw new Error("Time slot is not booked");
+    }
+
+    // Mark the time slot as available
+    timeSlot.is_booked = false;
+    await timeSlot.save();
+
+    return timeSlot;
+  } catch (error) {
+    console.error("Error in releaseTimeSlotService:", error.message || error);
+    throw error; // Propagate the error to the controller
+  }
+};
+
+// generate time slots for a provider
+const generateTimeSlotsForProvider = async (providerId, startDate, endDate) => {
+  
+}
 
 module.exports = {
   createTimeSlotService,
   getAvailableTimeSlotsService,
+  bookTimeSlotService,
+  releaseTimeSlotService,
 };
