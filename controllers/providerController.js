@@ -2,6 +2,7 @@ const {
   getProviderByIdService,
   createProviderService,
   updateProviderService,
+  getProviderAppointmentSettingsService,
 } = require("../services/providerService");
 
 // GET api/provider/:providerId
@@ -43,8 +44,23 @@ const updateProvider = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+// GET api/provider/:providerId/settings
+// Get provider appointment settings
+const getProviderAppointmentSettings = async (req, res) => {
+  const providerId = req.params.providerId;
+  try {
+    const settings = await getProviderAppointmentSettingsService(providerId);
+    res.status(200).json(settings);
+  } catch (error) {
+    console.error("Error fetching provider appointment settings:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 module.exports = {
   getProviderById,
   createProvider,
   updateProvider,
+  getProviderAppointmentSettings,
 };
