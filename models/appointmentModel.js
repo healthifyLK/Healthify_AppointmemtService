@@ -27,15 +27,15 @@ const Appointment = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    duration:{
+    duration: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    appointmentCharge :{
+    appointmentCharge: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
     },
-    additionalDetails :{
+    additionalDetails: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
@@ -60,10 +60,28 @@ const Appointment = sequelize.define(
 );
 
 // Associations
+AppointmentType.hasMany(Appointment, {
+  foreignKey: "appointment_type_id",
+  as: "appointments",
+});
 Appointment.belongsTo(AppointmentType, { foreignKey: "appointment_type_id" });
-Appointment.belongsTo(AppointmentMode, { foreignKey: "appointment_mode_id" });
-Appointment.belongsTo(Provider, { foreignKey: "provider_id" });
-Appointment.belongsTo(TimeSlot, { foreignKey: "time_slot_id" });
 
+AppointmentMode.hasMany(Appointment, {
+  foreignKey: "appointment_mode_id",
+  as: "appointments",
+});
+Appointment.belongsTo(AppointmentMode, { foreignKey: "appointment_mode_id" });
+
+Provider.hasMany(Appointment, {
+  foreignKey: "provider_id",
+  as: "appointments",
+});
+Appointment.belongsTo(Provider, { foreignKey: "provider_id" });
+
+TimeSlot.hasMany(Appointment, {
+  foreignKey: "time_slot_id",
+  as: "appointments",
+});
+Appointment.belongsTo(TimeSlot, { foreignKey: "time_slot_id", as: "timeSlot" });
 
 module.exports = Appointment;

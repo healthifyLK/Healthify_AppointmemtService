@@ -31,6 +31,10 @@ const ProviderWorkingHours = sequelize.define('ProviderWorkingHours', {
 })
 
 // Associate ProviderWorkingHours with Provider
+Provider.hasMany(ProviderWorkingHours, {
+    foreignKey: 'provider_id',
+    as: 'workingHours',
+});
 ProviderWorkingHours.belongsTo(Provider, {
     foreignKey: 'provider_id',
 });

@@ -2,12 +2,23 @@
 const Appointment = require("../models/appointmentModel");
 const TimeSlot = require("../models/timeSlot");
 const Provider = require("../models/provider");
+const timeSlotService = require("./timeSlot.service");
 
 // Get all apointments
 const getAllAppointmentsService = async () => {
   try {
     const appointments = await Appointment.findAll({
-      include: [Provider, TimeSlot],
+      order: [["created_at", "DESC"]],
+      include: [
+        {
+          model: Provider,
+          as: "provider",
+        },
+        {
+          model: TimeSlot,
+          as: "timeSlot",
+        },
+      ],
     });
     return appointments;
   } catch (error) {
@@ -20,78 +31,64 @@ const getAllAppointmentsService = async () => {
 };
 // Create a new appointment
 const createAppointmentService = async (appointmentData) => {
+  const transaction = await sequelize.transaction();
+
   try {
-    const { patient_id, provider_id, type, mode, scheduled_time } =
-      appointmentData;
-
-    // Validate appointment data
-    if (!patient_id || !provider_id || !type || !mode) {
-      throw new Error("Missing required appointment data");
+    // Handle scheduled appointments with time slot conflict checking
+    if (appointmentData.time_slot_id) {
+      const isBooked = await checkAndBookTimeSlot(
+        appointmentData.time_slot_id,
+        transaction
+      );
+      if (!isBooked) {
+        throw new Error("Time slot is already booked");
+      }
     }
-    // Handle Urgent appointment scenario
-    if (mode.name === "Urgent") {
-      // Create appointment
-      const appointment = await Appointment.create({
-        patient_id,
-        provider_id,
-        appointment_type_id: type.id,
-        appointment_mode_id: mode.id,
-        scheduled_time: new Date(),
-        status: "Payment Pending",
-      });
 
-      return appointment;
-    } else {
-      if (!scheduled_time) {
-        throw new Error(
-          "Scheduled time is required for non-urgent appointments"
-        );
+    // Handle urgent appointments with provider availability checking
+    if (
+      appointmentData.appoointmentMode.name === "urgent" &&
+      !appointmentData.time_slot_id
+    ) {
+      const urgentSlot = await createUrgentTimeSlotWithConflictCheck(
+        appointmentData.provider_id,
+        appointmentData.appointmentType,
+        appointmentData.duration,
+        transaction
+      );
+
+      if (!urgentSlot) {
+        throw new Error("No available time slot for urgent appointment");
       }
 
-      // Check if the time slot is available for the provider
-      const timeSlot = await TimeSlot.findOne({
-        where: {
-          provider_id,
-          start_time: scheduled_time,
-          is_booked: false,
-        },
-      });
-      if (!timeSlot) {
-        throw new Error("Time slot is not available");
-      }
-      //Mark the time slot as booked
-      timeSlot.is_booked = true;
-      await timeSlot.save();
+      appointmentData.time_slot_id = urgentSlot.time_slot_id;
+      appointmentData.scheduled_time = urgentSlot.start_time;
 
-      // Create appointment
-      const appointment = await Appointment.create({
-        patient_id,
-        provider_id,
-        appointment_type_id: type.id,
-        appointment_mode_id: mode.id,
-        scheduled_time: new Date(scheduled_time),
-        status: "Booked",
+      // Create the appointment
+      const appointment = await Appointment.create(appointmentData, {
+        transaction,
       });
-      return appointment;
+
+      await transaction.commit();
+      return await getAppointmentService(appointment.appointment_id);
     }
   } catch (error) {
-    console.error("Error in createAppointmentService:", error.message || error);
-    throw error; // Propagate the error to the controller
+    await transaction.rollback();
+    if (error.message === "Time slot is already booked") {
+      throw new Error(
+        "The selected time slot has been booked by another patient. Please choose a different time."
+      );
+    }
+    if (error.message === "No available time slot for urgent appointment") {
+      throw new Error(
+        "The provider is currently unavailable for urgent consultations. Please try another provider or schedule for later."
+      );
+    }
+    throw error;
   }
 };
 
-// Get all the active providers
-const getActiveProvidersService = async () => {
-  try {
-    const providers = await Provider.findAll({
-      where: { isActive: true },
-    });
-    return providers;
-  } catch (error) {
-    console.error("Error in getActiveProviders:", error.message || error);
-    throw error; // Propagate the error to the controller
-  }
-};
+
 
 // Get all the appointments for a patient
 const getAppointmentsForPatientService = async (patientId) => {
@@ -99,7 +96,16 @@ const getAppointmentsForPatientService = async (patientId) => {
     const appointments = await Appointment.findAll({
       where: { patient_id: patientId },
       order: [["scheduled_time", "DESC"]],
-      include: [Provider, TimeSlot],
+      include: [
+        {
+          model: Provider,
+          as: "provider",
+        },
+        {
+          model: TimeSlot,
+          as: "timeSlot",
+        },
+      ],
     });
     return appointments;
   } catch (error) {
@@ -117,7 +123,12 @@ const getAppointmentsForProviderService = async (providerId) => {
     const appointments = await Appointment.findAll({
       where: { provider_id: providerId },
       order: [["scheduled_time", "DESC"]],
-      include: [Provider, TimeSlot],
+      include: [
+        {
+          model: TimeSlot,
+          as: "timeSlot",
+        },
+      ],
     });
     return appointments;
   } catch (error) {
@@ -134,7 +145,16 @@ const getAppointmentService = async (appointmentId) => {
   try {
     const appointment = await Appointment.findOne({
       where: { appointment_id: appointmentId },
-      include: [Provider, TimeSlot],
+      include: [
+        {
+          model: Provider,
+          as: "provider",
+        },
+        {
+          model: TimeSlot,
+          as: "timeSlot",
+        },
+      ],
     });
     return appointment;
   } catch (error) {
@@ -156,7 +176,7 @@ const cancelAppointmentService = async (appointmentId) => {
     }
 
     return await updateAppointmentService(appointmentId, {
-      status: "Cancelled"
+      status: "Cancelled",
     });
   } catch (error) {
     console.error("Error in cancelAppointmentService:", error.message || error);
@@ -165,7 +185,10 @@ const cancelAppointmentService = async (appointmentId) => {
 };
 
 // update appointment
-const updateAppointmentService = async (appointmentId, updatedAppointmentData) => {
+const updateAppointmentService = async (
+  appointmentId,
+  updatedAppointmentData
+) => {
   try {
     const appointment = await getAppointmentService(appointmentId);
     if (!appointment) {
@@ -180,13 +203,18 @@ const updateAppointmentService = async (appointmentId, updatedAppointmentData) =
   }
 };
 
+// update appointment status
+const updateAppointmentStatusService = async (appointmentId, status) => {
+  return await updateAppointment(appointmentId, { status: status });
+};
+
 module.exports = {
   createAppointmentService,
-  getActiveProvidersService,
   getAppointmentsForPatientService,
   getAppointmentsForProviderService,
   getAllAppointmentsService,
   getAppointmentService,
   cancelAppointmentService,
   updateAppointmentService,
+  updateAppointmentStatusService,
 };

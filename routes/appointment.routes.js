@@ -2,12 +2,12 @@ const express = require("express");
 const router = express.Router();
 const {
   createAppointment,
-  getActiveProviders,
   getAppointmentsForPatient,
   getAppointmentsForProvider,
   getAllAppointments,
   cancelAppointment,
-  updateAppointment
+  updateAppointment,
+  updateAppointmentStatus,
 } = require("../controllers/appointment.controller");
 
 const {
@@ -18,9 +18,6 @@ const {
 // GET api/appointments
 // Get all appointments
 router.get("/", getAllAppointments);
-// GET api/appointments/active-providers
-// Get all active providers
-router.get("/active-providers", getActiveProviders);
 // POST api/appointments
 // Create a new appointment
 router.post("/", createAppointment);
@@ -40,6 +37,10 @@ router.put("/:appointmentId/cancel", cancelAppointment);
 // PUT api/appointments/:appointmentId
 // Update an appointment
 router.put("/:appointmentId", updateAppointment);
+
+// PUT api/appointments/:appointmentId/status
+// Update appointment status
+router.patch("/:appointmentId/status", updateAppointmentStatus);
 
 
 // Routes for time slots

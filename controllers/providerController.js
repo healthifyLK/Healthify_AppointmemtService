@@ -1,8 +1,17 @@
 const {
   getProviderByIdService,
   createProviderService,
+  createProviderAppointmentSettingsService,
+  getProviderWorkingHoursService,
   updateProviderService,
   getProviderAppointmentSettingsService,
+  deleteProviderWorkingHoursService,
+  toggleProviderStatusService,
+  updateProviderSettingsService,
+  getAvailableProvidersForUrgentService,
+  updateProviderWorkingHoursService,
+  createProviderWorkingHoursService,
+  getActiveProvidersService
 } = require("../services/providerService");
 
 // GET api/provider/:providerId
@@ -15,6 +24,18 @@ const getProviderById = async (req, res) => {
   } catch (error) {
     console.error("Error fetching provider details:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// GET api/providers/active-providers
+// get active providers
+const getActiveProviders = async (req, res) => {
+  try {
+    const providers = await getActiveProvidersService();
+    res.json(providers);
+  } catch (error) {
+    console.error("Error fetching active providers:", error);
+    res.status(500).json({ message: "Failed to fetch active providers" });
   }
 };
 
@@ -58,9 +79,52 @@ const getProviderAppointmentSettings = async (req, res) => {
   }
 };
 
+// Toggle Provider status
+const toggleProviderStatus = async (req, res) => {
+  try {
+    const { providerId } = req.params;
+    const provider = await toggleProviderStatusService(providerId);
+    res.json(provider);
+  } catch (error) {
+    console.error("Error toggling provider status:", error);
+    res.status(500).json({ message: "Failed to toggle provider status" });
+  }
+};
+
+// Get provider working hours
+const getProviderWorkingHours = async (req, res) => {
+  try {
+    const { providerId } = req.params;
+    const workingHours = await getProviderWorkingHoursService(providerId);
+    res.json(workingHours);
+  } catch (error) {
+    console.error("Error fetching provider working hours:", error);
+    res.status(500).json({ message: "Failed to fetch provider working hours" });
+  }
+};
+
+// Get available providers for urgent consultations
+const getAvailableProvidersForUrgent = async (req, res) => {
+  try {
+    const { appointmentType, duration } = req.query;
+    const providers = await providerService.getAvailableProvidersForUrgent(
+      appointmentType,
+      parseInt(duration) 
+    );
+    res.json(providers);
+  } catch (error) {
+    console.error("Error fetching available providers for urgent:", error);
+    res.status(500).json({ message: "Failed to fetch available providers" });
+  }
+};
 module.exports = {
   getProviderById,
   createProvider,
   updateProvider,
   getProviderAppointmentSettings,
+  toggleProviderStatus,
+  getProviderWorkingHours,
+  getAvailableProvidersForUrgent,
+  getActiveProviders
+
 };

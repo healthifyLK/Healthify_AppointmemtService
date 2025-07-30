@@ -1,13 +1,13 @@
 // Controllers for appointment-related routes
 const {
   createAppointmentService,
-  getActiveProvidersService,
   getAppointmentsForPatientService,
   getAppointmentsForProviderService,
   getAllAppointmentsService,
   getAppointmentService,
   cancelAppointmentService,
   updateAppointmentService,
+  updateAppointmentStatusService,
 } = require("../services/appointment.service");
 
 // GET api/appointments
@@ -26,25 +26,43 @@ const getAllAppointments = async (req, res) => {
 const createAppointment = async (req, res) => {
   try {
     const appointmentData = req.body;
+    // Validate appointment data here if needed
+    if (
+      !appointmentData.provider_id ||
+      !appointmentData.patient_id ||
+      !appointmentData.time_slot_id ||
+      !appointmentData.appointmentType ||
+      appointmentData.appointmentMode
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Missing required appointment data" });
+    }
     const appointment = await createAppointmentService(appointmentData);
     res.status(201).json(appointment);
   } catch (error) {
+    // Handle specific conflict errors
+    if (error.message.includes("Time slot is already booked")) {
+      return res.status(409).json({
+        message: error.message,
+        errorType: "TIME_SLOT_CONFLICT",
+      });
+    }
+
+    if (
+      error.message.includes("No available time slot for urgent appointment")
+    ) {
+      return res.status(409).json({
+        message: error.message,
+        errorType: "PROVIDER_UNAVAILABLE",
+      });
+    }
+
     console.error("Error creating appointment:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ message: "Failed to create appointment" });
   }
 };
 
-// GET api/appointments/active-providers
-// Get all active providers
-const getActiveProviders = async (req, res) => {
-  try {
-    const providers = await getActiveProvidersService();
-    res.status(200).json(providers);
-  } catch (error) {
-    console.error("Error fetching active providers:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
 // GET api/appointments/patient/:patientId
 // Get all appointments for a patient
 const getAppointmentsForPatient = async (req, res) => {
@@ -90,7 +108,10 @@ const updateAppointment = async (req, res) => {
   const { appointmentId } = req.params;
   const updatedAppointmentData = req.body;
   try {
-    const updatedAppointment = await updateAppointmentService(appointmentId, updatedAppointmentData);
+    const updatedAppointment = await updateAppointmentService(
+      appointmentId,
+      updatedAppointmentData
+    );
     res.status(200).json(updatedAppointment);
   } catch (error) {
     console.error("Error updating appointment:", error);
@@ -98,12 +119,29 @@ const updateAppointment = async (req, res) => {
   }
 };
 
+// PATCH api/appointments/:appointmentId/status
+// Update appointment status
+const updateAppointmentStatus = async (req, res) => {
+  const { appointmentId } = req.params;
+  const { status } = req.body;
+  try {
+    const updatedAppointment = await updateAppointmentStatusService(
+      appointmentId,
+      status
+    );
+    res.status(200).json(updatedAppointment);
+  } catch (error) {
+    console.error("Error updating appointment status:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 module.exports = {
   createAppointment,
-  getActiveProviders,
   getAppointmentsForPatient,
   getAppointmentsForProvider,
   getAllAppointments,
   cancelAppointment,
-  updateAppointment
+  updateAppointment,
+  updateAppointmentStatus,
 };

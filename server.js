@@ -9,6 +9,7 @@ const Provider = require("./models/provider");
 const TimeSlot = require("./models/timeSlot");
 const sequelize = require("./config/sequelize");
 const appointmentRoutes = require('./routes/appointment.routes')
+const providerRoutes = require('./routes/provider.routes')
 
 const PORT = process.env.PORT || 5003;
 
@@ -22,6 +23,7 @@ app.use(morgan());
 
 // Routes
 app.use('/api/appointments',appointmentRoutes);
+app.use('/api/providers',providerRoutes);
 
 // Start   the server only if the database connection is successful
 (async () => {

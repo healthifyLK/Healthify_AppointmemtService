@@ -33,10 +33,18 @@ const TimeSlot = sequelize.define(
 );
 
 // Associate TimeSlot with Provider
+Provider.hasMany(TimeSlot, {
+  foreignKey: "provider_id",
+  as: "timeSlots",
+});
 TimeSlot.belongsTo(Provider, {
   foreignKey: "provider_id",
 });
 // Associate TimeSlot with AppointmentType
+AppointmentType.hasMany(TimeSlot, {
+  foreignKey: "appointment_type_id",
+  as: "timeSlots",
+});
 TimeSlot.belongsTo(AppointmentType, {
   foreignKey: "appointment_type_id",
 });
