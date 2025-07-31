@@ -22,6 +22,7 @@ const Provider = sequelize.define('Provider', {
     },
     rating:{
         type: DataTypes.FLOAT,
+        defaultValue:0.0,
         allowNull: true,
     },
     homeVisitLimit:{

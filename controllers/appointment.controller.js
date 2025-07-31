@@ -26,13 +26,15 @@ const getAllAppointments = async (req, res) => {
 const createAppointment = async (req, res) => {
   try {
     const appointmentData = req.body;
+    console.log('appointmentData',appointmentData);
+    
     // Validate appointment data here if needed
     if (
       !appointmentData.provider_id ||
       !appointmentData.patient_id ||
       !appointmentData.time_slot_id ||
       !appointmentData.appointmentType ||
-      appointmentData.appointmentMode
+      !appointmentData.appointmentMode
     ) {
       return res
         .status(400)

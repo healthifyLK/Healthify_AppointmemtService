@@ -43,13 +43,6 @@ router.put("/:appointmentId", updateAppointment);
 router.patch("/:appointmentId/status", updateAppointmentStatus);
 
 
-// Routes for time slots
-// POST api/appointments/time-slots
-// Create a new time slot
-router.post("/time-slots", createTimeSlot);
 
-// GET api/appointments/time-slots/Provider/:provider_id
-// Get available time slots for a provider
-router.get("/time-slots/provider/:provider_id", getAvailableTimeSlots);
 
 module.exports = router;

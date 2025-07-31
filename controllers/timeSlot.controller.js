@@ -2,6 +2,7 @@ const {
   createTimeSlotService,
   getAvailableTimeSlotsService,
   checkProviderAvailabilityService,
+  generateTimeSlotsForProviderService,
 } = require("../services/timeSlot.service");
 
 // POST api/apointments/time-slots
@@ -25,12 +26,17 @@ const createTimeSlot = async (req, res) => {
 // GET api/appointments/time-slots/available
 // Get available time slots for a provider
 const getAvailableTimeSlots = async (req, res) => {
-  const { provider_id } = req.params;
-  const { date, appointmentType } = req.query;
-  if (!provider_id) {
+  const { providerId } = req.params;
+  const { date, appointmentTypeId } = req.query;
+  console.log("ProviderId", providerId);
+  console.log("Data", date);
+  console.log("Appointment Type Id", appointmentTypeId);
+  
+
+  if (!providerId) {
     return res.status(400).json({ error: "Provider ID is required" });
   }
-  if (!appointmentType || !date) {
+  if (!appointmentTypeId || !date) {
     return res
       .status(400)
       .json({ message: "appointmentType and date are required" });
@@ -38,9 +44,9 @@ const getAvailableTimeSlots = async (req, res) => {
 
   try {
     const timeSlots = await getAvailableTimeSlotsService(
-      provider_id,
+      providerId,
       date,
-      appointmentType
+      appointmentTypeId,
     );
     res.status(200).json(timeSlots);
   } catch (error) {
@@ -53,7 +59,7 @@ const getAvailableTimeSlots = async (req, res) => {
 const generateTimeSlots = async (req, res) => {
   try {
     const { providerId } = req.params;
-    await generateTimeSlots(providerId);
+    await generateTimeSlotsForProviderService(providerId);
     res.json({ message: "Time slots generated successfully" });
   } catch (error) {
     console.error("Error generating time slots:", error);
@@ -92,4 +98,5 @@ module.exports = {
   createTimeSlot,
   getAvailableTimeSlots,
   generateTimeSlots,
+  checkProviderAvailability,
 };

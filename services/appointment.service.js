@@ -1,8 +1,16 @@
 // Business logic for appointment service
+const sequelize = require("../config/sequelize");
 const Appointment = require("../models/appointmentModel");
 const TimeSlot = require("../models/timeSlot");
 const Provider = require("../models/provider");
-const timeSlotService = require("./timeSlot.service");
+const {
+  bookTimeSlot,
+  releaseTimeSlot,
+  createUrgentTimeSlot,
+  checkAndBookTimeSlot,
+  createUrgentTimeSlotWithConflictCheck,
+  releaseTimeSlotService,
+} = require("./timeSlot.service");
 
 // Get all apointments
 const getAllAppointmentsService = async () => {
@@ -47,7 +55,7 @@ const createAppointmentService = async (appointmentData) => {
 
     // Handle urgent appointments with provider availability checking
     if (
-      appointmentData.appoointmentMode.name === "urgent" &&
+      appointmentData.appointmentMode.name === "Urgent" &&
       !appointmentData.time_slot_id
     ) {
       const urgentSlot = await createUrgentTimeSlotWithConflictCheck(
@@ -61,17 +69,22 @@ const createAppointmentService = async (appointmentData) => {
         throw new Error("No available time slot for urgent appointment");
       }
 
+      
+
       appointmentData.time_slot_id = urgentSlot.time_slot_id;
       appointmentData.scheduled_time = urgentSlot.start_time;
-
-      // Create the appointment
-      const appointment = await Appointment.create(appointmentData, {
-        transaction,
-      });
-
-      await transaction.commit();
-      return await getAppointmentService(appointment.appointment_id);
     }
+    appointmentData.status = "Booked";
+    appointmentData.appointment_type_id = appointmentData.appointmentType.id
+    appointmentData.appointment_mode_id = appointmentData.appointmentMode.id
+
+    // Create the appointment
+    const appointment = await Appointment.create(appointmentData, {
+      transaction,
+    });
+
+    await transaction.commit();
+    return await getAppointmentService(appointment.appointment_id);
   } catch (error) {
     await transaction.rollback();
     if (error.message === "Time slot is already booked") {
@@ -87,8 +100,6 @@ const createAppointmentService = async (appointmentData) => {
     throw error;
   }
 };
-
-
 
 // Get all the appointments for a patient
 const getAppointmentsForPatientService = async (patientId) => {
@@ -172,7 +183,7 @@ const cancelAppointmentService = async (appointmentId) => {
     }
     // Free the time slot
     if (appointment.time_slot_id) {
-      await timeSlotService.releaseTimeSlot(appointment.time_slot_id);
+      await releaseTimeSlotService(appointment.time_slot_id);
     }
 
     return await updateAppointmentService(appointmentId, {

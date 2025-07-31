@@ -3,7 +3,11 @@ const sequelize = require("../config/sequelize");
 const Provider = require("../models/provider");
 const ProviderAppointmentSettings = require("../models/providerAppointmentSettings");
 const ProviderWorkingHours = require("../models/providerWorkingHours");
-const { checkProviderAvailabilityService } = require("./timeSlot.service");
+const {
+  checkProviderAvailabilityService,
+  generateSlotsForDayService,
+  generateTimeSlotsForProviderService,
+} = require("./timeSlot.service");
 
 // Get provider details by provider ID
 const getProviderByIdService = async (providerId) => {
@@ -11,7 +15,7 @@ const getProviderByIdService = async (providerId) => {
     const provider = await Provider.findOne({
       where: { provider_id: providerId },
       include: [
-        { model: ProviderAppointmentSettings, as: "settings" },
+        { model: ProviderAppointmentSettings, as: "appointmentSettings" },
         { model: ProviderWorkingHours, as: "workingHours" },
       ],
     });
@@ -48,16 +52,18 @@ const createProviderService = async (providerData) => {
   const transaction = await sequelize.transaction();
   try {
     const newProvider = await Provider.create(providerData, { transaction });
+    console.log("new Provider", newProvider);
+
+    const settingsData = {
+      provider_id: newProvider.provider_id,
+      chatDuration: 15, // Default duration in minutes
+      videoDuration: 30,
+    };
 
     // Create default appointment settings for the new provider
-    await createProviderAppointmentSettingsService(
-      {
-        provider_id: newProvider.provider_id,
-        chatDuration: 15, // Default duration in minutes
-        videoDuration: 30, // Default duration in minutes
-      },
-      { transaction }
-    );
+    await createProviderAppointmentSettingsService(settingsData, {
+      transaction,
+    });
     await transaction.commit();
     return newProvider;
   } catch (error) {
@@ -88,19 +94,29 @@ const updateProviderService = async (providerId, updateData) => {
 
 // Toggle Provoider Status
 const toggleProviderStatusService = async (providerId) => {
-  const provider = await Provider.findByPk({ provider_id: providerId });
+  console.log("ProviderId", providerId);
+
+  const provider = await Provider.findOne({ provider_id: providerId });
   if (!provider) {
     throw new Error("Provider not found");
   }
 
-  return await updateProvider(providerId, {
+  return await updateProviderService(providerId, {
     isActive: !provider.isActive,
   });
 };
 // Create provider appointment settings
-const createProviderAppointmentSettingsService = async (settingsData) => {
+const createProviderAppointmentSettingsService = async (
+  settingsData,
+  options = {}
+) => {
+  console.log("Settings Data:", settingsData);
+
   try {
-    const newSettings = await ProviderAppointmentSettings.create(settingsData);
+    const newSettings = await ProviderAppointmentSettings.create(
+      settingsData,
+      options
+    );
     return newSettings;
   } catch (error) {
     console.error(
@@ -139,6 +155,56 @@ const updateProviderSettingsService = async (providerId, settingsData) => {
     throw new Error("Provider settings not found");
   }
   return await ProviderSettings.findOne({ where: { provider_id: providerId } });
+};
+
+// Combined provider settings update function
+const updateProviderSettingsAndWorkingHoursService = async (
+  providerId,
+  settings,
+  workingHours
+) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    // 1️⃣ Update provider settings if provided
+    if (settings) {
+      await ProviderAppointmentSettings.update(settings, {
+        where: { provider_id: providerId },
+        transaction,
+      });
+    }
+
+    // 2️⃣ Update working hours if provided
+    if (workingHours && workingHours.length > 0) {
+      // Delete existing working hours
+      await ProviderWorkingHours.destroy({
+        where: { provider_id: providerId },
+        transaction,
+      });
+
+      // Add provider_id to each record
+      const newWorkingHours = workingHours.map((hour) => ({
+        ...hour,
+        provider_id: providerId,
+      }));
+
+      // Bulk insert all working hours
+      await ProviderWorkingHours.bulkCreate(newWorkingHours, { transaction });
+
+      // Regenerate time slots based on working hours
+      await generateTimeSlotsForProviderService(providerId, transaction);
+    }
+
+    // ✅ Commit if everything succeeds
+    await transaction.commit();
+    return {
+      message: "Provider settings and working hours updated successfully",
+    };
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error updating provider settings and working hours:", error);
+    throw error;
+  }
 };
 
 // Create provide working hours
@@ -219,7 +285,10 @@ const deleteProviderWorkingHoursService = async (working_hours_id) => {
 };
 
 // Get available providers for urgent consultations
-const getAvailableProvidersForUrgentService = async (appointmentType, duration) => {
+const getAvailableProvidersForUrgentService = async (
+  appointmentType,
+  duration
+) => {
   const activeProviders = await getActiveProvidersService();
   const availableProviders = [];
 
@@ -255,6 +324,6 @@ module.exports = {
   getAvailableProvidersForUrgentService,
   updateProviderWorkingHoursService,
   createProviderWorkingHoursService,
-  getActiveProvidersService
-
+  getActiveProvidersService,
+  updateProviderSettingsAndWorkingHoursService,
 };

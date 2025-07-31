@@ -11,7 +11,7 @@ const createTimeSlotService = async (timeSlotData) => {
   try {
     // Validate time slot data
     if (!start_time || !end_time) {
-      throw new Error("Start timr and end time are required.");
+      throw new Error("Start time and end time are required.");
     }
 
     if (new Date(start_time) >= new Date(end_time)) {
@@ -37,7 +37,8 @@ const createTimeSlotService = async (timeSlotData) => {
 const getAvailableTimeSlotsService = async (
   provider_id,
   date,
-  appointmentType
+  appointmentTypeId,
+  
 ) => {
   try {
     const startOfDay = new Date(date);
@@ -49,7 +50,7 @@ const getAvailableTimeSlotsService = async (
     return await TimeSlot.findAll({
       where: {
         provider_id: provider_id,
-        appointment_type_id: appointmentType.id,
+        appointment_type_id: appointmentTypeId,
         is_booked: false,
         start_time: {
           [Op.between]: [startOfDay, endOfDay],
@@ -65,15 +66,6 @@ const getAvailableTimeSlotsService = async (
     throw error;
   }
 };
-// Book a time slot
-const bookTimeSlotService = async (time_slot_id) => {
-  return await updateTimeSlotService(time_slot_id, { is_booked: true });
-};
-
-// release a booked time slot
-const releaseTimeSlotService = async (time_slot_id) => {
-  return await updateTimeSlotService(time_slot_id, { is_booked: false });
-};
 
 // update Time SLot
 const updateTimeSlotService = async (time_slot_id, timeSlotData) => {
@@ -84,6 +76,15 @@ const updateTimeSlotService = async (time_slot_id, timeSlotData) => {
     throw new Error("Time slot not found");
   }
   return await TimeSlot.findByPk(time_slot_id);
+};
+// Book a time slot
+const bookTimeSlotService = async (time_slot_id) => {
+  return await updateTimeSlotService(time_slot_id, { is_booked: true });
+};
+
+// release a booked time slot
+const releaseTimeSlotService = async (time_slot_id) => {
+  return await updateTimeSlotService(time_slot_id, { is_booked: false });
 };
 
 // detele a time slot
@@ -189,7 +190,7 @@ const createUrgentTimeSlotWithConflictCheck = async (
 
   try {
     // Check if provider has any overlapping appointments
-    const conflicts = await checkProviderAvailability(
+    const conflicts = await checkProviderAvailabilityService(
       providerId,
       now,
       endTime,
@@ -262,19 +263,21 @@ const checkProviderAvailabilityService = async (
 };
 
 // generate time slots for a provider
-const generateTimeSlotsForProviderService = async (providerId) => {
+const generateTimeSlotsForProviderService = async (providerId,transaction) => {
   try {
     // get provider working hours
-    const workingHours = await ProviderWorkingHours.findOne({
+    const workingHours = await ProviderWorkingHours.findAll({
       where: { provider_id: providerId },
+      transaction
     });
-    if (!workingHours) {
+    if (!workingHours || workingHours.length === 0) {
       throw new Error("Provider working hours not found");
     }
 
     // get provider appointment settings
     const appointmentSettings = await ProviderAppointmentSettings.findOne({
       where: { provider_id: providerId },
+      transaction
     });
     if (!appointmentSettings) {
       throw new Error("Provider appointment settings not found");
@@ -285,13 +288,13 @@ const generateTimeSlotsForProviderService = async (providerId) => {
     const endDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days later
 
     const dayMap = {
-      0: "sunday",
-      1: "monday",
-      2: "tuesday",
-      3: "wednesday",
-      4: "thursday",
-      5: "friday",
-      6: "saturday",
+      0: "Sunday",
+      1: "Monday",
+      2: "Tuesday",
+      3: "Wednesday",
+      4: "Thursday",
+      5: "Friday",
+      6: "Saturday",
     };
 
     for (
@@ -305,7 +308,17 @@ const generateTimeSlotsForProviderService = async (providerId) => {
       );
       if (!dayHours) continue; // Skip if no working hours for this day
 
+      console.log('DayHours:',dayHours);
+      
+
       // Generate time slots for chat,video and home visit appointments
+      await generateSlotsForDayService(
+        providerId,
+        new Date(date),
+        dayHours.start_time,
+        dayHours.end_time,
+        appointmentSettings
+      );
     }
   } catch (error) {
     console.error(
@@ -316,7 +329,50 @@ const generateTimeSlotsForProviderService = async (providerId) => {
   }
 };
 
+// generate time slots for day
+const generateSlotsForDayService = async (
+  providerId,
+  date,
+  startTime,
+  endTime,
+  settings
+) => {
+  const appointmentTypes = [
+    { id: 1, type: "Chat-Consultation", duration: settings.chatDuration },
+    { id: 2, type: "Video-Consultation", duration: settings.videoDuration },
+    { id: 3, type: "Home-Visit", duration: settings.homeVisitDuration },
+  ];
 
+  for (const { id, type, duration } of appointmentTypes) {
+    const [startHour, startMinute] = startTime.split(":").map(Number);
+    const [endHour, endMinute] = endTime.split(":").map(Number);
+
+    const slotStart = new Date(date);
+    slotStart.setHours(startHour, startMinute, 0, 0);
+
+    const slotEnd = new Date(date);
+    slotEnd.setHours(endHour, endMinute, 0, 0);
+
+    let currentTime = new Date(slotStart);
+
+    while (currentTime < slotEnd) {
+      const slotEndTime = new Date(currentTime.getTime() + duration * 60000);
+
+      const timeSlotData = {
+        provider_id: providerId,
+        start_time: new Date(currentTime),
+        end_time: slotEndTime,
+        appointment_type_id: id,
+        is_booked: false,
+      };
+
+      if (slotEndTime <= slotEnd) {
+        await createTimeSlotService(timeSlotData);
+      }
+      currentTime = new Date(currentTime.getTime() + duration * 60000);
+    }
+  }
+};
 
 module.exports = {
   createTimeSlotService,
@@ -330,5 +386,6 @@ module.exports = {
   checkProviderAvailabilityService,
   updateTimeSlotService,
   createUrgentTimeSlot,
-  createUrgentTimeSlotWithConflictCheck
+  createUrgentTimeSlotWithConflictCheck,
+  generateSlotsForDayService,
 };

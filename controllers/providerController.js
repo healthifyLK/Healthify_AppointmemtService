@@ -11,7 +11,8 @@ const {
   getAvailableProvidersForUrgentService,
   updateProviderWorkingHoursService,
   createProviderWorkingHoursService,
-  getActiveProvidersService
+  getActiveProvidersService,
+  updateProviderSettingsAndWorkingHoursService
 } = require("../services/providerService");
 
 // GET api/provider/:providerId
@@ -66,6 +67,25 @@ const updateProvider = async (req, res) => {
   }
 };
 
+// PUT api/provider/
+// Update Provider Settings
+const updateProviderSettings = async (req, res) => {
+  try {
+    const { providerId } = req.params;
+    const { settings, workingHours } = req.body;
+
+    await updateProviderSettingsAndWorkingHoursService(
+      providerId,
+      settings,
+      workingHours
+    );
+    res.json({ message: "Provider settings updated successfully" });
+  } catch (error) {
+    console.error("Error updating provider settings:", error);
+    res.status(500).json({ message: "Failed to update provider settings" });
+  }
+};
+
 // GET api/provider/:providerId/settings
 // Get provider appointment settings
 const getProviderAppointmentSettings = async (req, res) => {
@@ -107,9 +127,9 @@ const getProviderWorkingHours = async (req, res) => {
 const getAvailableProvidersForUrgent = async (req, res) => {
   try {
     const { appointmentType, duration } = req.query;
-    const providers = await providerService.getAvailableProvidersForUrgent(
+    const providers = await getAvailableProvidersForUrgentService(
       appointmentType,
-      parseInt(duration) 
+      parseInt(duration)
     );
     res.json(providers);
   } catch (error) {
@@ -125,6 +145,6 @@ module.exports = {
   toggleProviderStatus,
   getProviderWorkingHours,
   getAvailableProvidersForUrgent,
-  getActiveProviders
-
+  getActiveProviders,
+  updateProviderSettings
 };

@@ -27,13 +27,10 @@ const Appointment = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    duration: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
     appointmentCharge: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
+      defaultValue:0.0
     },
     additionalDetails: {
       type: DataTypes.TEXT,
@@ -76,7 +73,7 @@ Provider.hasMany(Appointment, {
   foreignKey: "provider_id",
   as: "appointments",
 });
-Appointment.belongsTo(Provider, { foreignKey: "provider_id" });
+Appointment.belongsTo(Provider, { foreignKey: "provider_id",as:'provider' });
 
 TimeSlot.hasMany(Appointment, {
   foreignKey: "time_slot_id",
