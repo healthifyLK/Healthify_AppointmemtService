@@ -286,7 +286,6 @@ const deleteProviderWorkingHoursService = async (working_hours_id) => {
 
 // Get available providers for urgent consultations
 const getAvailableProvidersForUrgentService = async (
-  appointmentType,
   duration
 ) => {
   const activeProviders = await getActiveProvidersService();

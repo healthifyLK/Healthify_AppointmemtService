@@ -1,5 +1,5 @@
 const TimeSlot = require("../models/timeSlot");
-const { Op } = require("sequelize");
+const { Op, DATE } = require("sequelize");
 const ProviderWorkingHours = require("../models/providerWorkingHours");
 const ProviderAppointmentSettings = require("../models/providerAppointmentSettings");
 
@@ -13,6 +13,8 @@ const createTimeSlotService = async (timeSlotData) => {
     if (!start_time || !end_time) {
       throw new Error("Start time and end time are required.");
     }
+    
+    
 
     if (new Date(start_time) >= new Date(end_time)) {
       throw new Error("Start time must be before end time.");
@@ -37,8 +39,7 @@ const createTimeSlotService = async (timeSlotData) => {
 const getAvailableTimeSlotsService = async (
   provider_id,
   date,
-  appointmentTypeId,
-  
+  appointmentTypeId
 ) => {
   try {
     const startOfDay = new Date(date);
@@ -133,13 +134,13 @@ const checkAndBookTimeSlot = async (timeSlotId, transaction = null) => {
       throw new Error("Time slot not found");
     }
 
-    if (timeSlot.isBooked) {
+    if (timeSlot.is_booked) {
       return false; // Already booked
     }
 
     // Book the time slot
     await timeSlot.update(
-      { isBooked: true },
+      { is_booked: true },
       { transaction: transactionInstance }
     );
 
@@ -237,21 +238,27 @@ const checkProviderAvailabilityService = async (
 ) => {
   const transactionOptions = transaction ? { transaction } : {};
 
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    throw new Error(`Invalid startTime or endTime: ${startTime}, ${endTime}`);
+  }
+
   // Check for overlapping booked time slots
   const overlappingSlots = await TimeSlot.findAll({
     where: {
-      providerId,
+      provider_id:providerId,
       is_booked: true,
       // Check for overlap: new appointment overlaps if it starts before existing ends and ends after existing starts
       [Op.and]: [
         {
           start_time: {
-            [Op.lt]: endTime, // Existing starts before new ends
+            [Op.lt]: end, // Existing starts before new ends
           },
         },
         {
           end_time: {
-            [Op.gt]: startTime, // Existing ends after new starts
+            [Op.gt]: start, // Existing ends after new starts
           },
         },
       ],
@@ -263,12 +270,12 @@ const checkProviderAvailabilityService = async (
 };
 
 // generate time slots for a provider
-const generateTimeSlotsForProviderService = async (providerId,transaction) => {
+const generateTimeSlotsForProviderService = async (providerId, transaction) => {
   try {
     // get provider working hours
     const workingHours = await ProviderWorkingHours.findAll({
       where: { provider_id: providerId },
-      transaction
+      transaction,
     });
     if (!workingHours || workingHours.length === 0) {
       throw new Error("Provider working hours not found");
@@ -277,7 +284,7 @@ const generateTimeSlotsForProviderService = async (providerId,transaction) => {
     // get provider appointment settings
     const appointmentSettings = await ProviderAppointmentSettings.findOne({
       where: { provider_id: providerId },
-      transaction
+      transaction,
     });
     if (!appointmentSettings) {
       throw new Error("Provider appointment settings not found");
@@ -308,8 +315,7 @@ const generateTimeSlotsForProviderService = async (providerId,transaction) => {
       );
       if (!dayHours) continue; // Skip if no working hours for this day
 
-      console.log('DayHours:',dayHours);
-      
+      console.log("DayHours:", dayHours);
 
       // Generate time slots for chat,video and home visit appointments
       await generateSlotsForDayService(

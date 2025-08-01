@@ -126,9 +126,8 @@ const getProviderWorkingHours = async (req, res) => {
 // Get available providers for urgent consultations
 const getAvailableProvidersForUrgent = async (req, res) => {
   try {
-    const { appointmentType, duration } = req.query;
+    const { duration } = req.query;
     const providers = await getAvailableProvidersForUrgentService(
-      appointmentType,
       parseInt(duration)
     );
     res.json(providers);

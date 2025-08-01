@@ -4,7 +4,7 @@ const Appointment = require("../models/appointmentModel");
 const TimeSlot = require("../models/timeSlot");
 const Provider = require("../models/provider");
 const {
-  bookTimeSlot,
+  bookTimeSlotService,
   releaseTimeSlot,
   createUrgentTimeSlot,
   checkAndBookTimeSlot,
@@ -53,11 +53,12 @@ const createAppointmentService = async (appointmentData) => {
       }
     }
 
+    console.log("Appointment Mode:", appointmentData.appointmentMode);
+    const mode = appointmentData.appointmentMode;
+    console.log("Mode", mode);
+
     // Handle urgent appointments with provider availability checking
-    if (
-      appointmentData.appointmentMode.name === "Urgent" &&
-      !appointmentData.time_slot_id
-    ) {
+    if (mode.name === "Urgent" && !appointmentData.time_slot_id) {
       const urgentSlot = await createUrgentTimeSlotWithConflictCheck(
         appointmentData.provider_id,
         appointmentData.appointmentType,
@@ -69,14 +70,17 @@ const createAppointmentService = async (appointmentData) => {
         throw new Error("No available time slot for urgent appointment");
       }
 
-      
-
       appointmentData.time_slot_id = urgentSlot.time_slot_id;
       appointmentData.scheduled_time = urgentSlot.start_time;
     }
+    // get the timeslot related to the time_slot_id
+    const scheduledTimeSlot = TimeSlot.findOne({
+      where: { time_slot_id: appointmentData.time_slot_id },
+    });
     appointmentData.status = "Booked";
-    appointmentData.appointment_type_id = appointmentData.appointmentType.id
-    appointmentData.appointment_mode_id = appointmentData.appointmentMode.id
+    appointmentData.appointment_type_id = appointmentData.appointmentType.id;
+    appointmentData.appointment_mode_id = appointmentData.appointmentMode.id;
+    appointmentData.scheduled_time = scheduledTimeSlot.start_time
 
     // Create the appointment
     const appointment = await Appointment.create(appointmentData, {
@@ -216,7 +220,7 @@ const updateAppointmentService = async (
 
 // update appointment status
 const updateAppointmentStatusService = async (appointmentId, status) => {
-  return await updateAppointment(appointmentId, { status: status });
+  return await updateAppointmentService(appointmentId, { status: status });
 };
 
 module.exports = {

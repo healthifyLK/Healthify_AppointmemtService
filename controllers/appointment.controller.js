@@ -32,7 +32,6 @@ const createAppointment = async (req, res) => {
     if (
       !appointmentData.provider_id ||
       !appointmentData.patient_id ||
-      !appointmentData.time_slot_id ||
       !appointmentData.appointmentType ||
       !appointmentData.appointmentMode
     ) {
